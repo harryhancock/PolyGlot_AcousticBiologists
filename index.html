@@ -166,6 +166,7 @@
 	let particles;
 	let particleConnectionWeight;
 	let particleHighDimConnectionWeight;
+	let particleColorMap;
 	let particleWeight;
 	let particlePositions;
 	let particleColor;
@@ -174,6 +175,7 @@
 	let allPoints;
 	let topEdgeWeight = -1;
 	let topNodeWeight = -1;
+	let topColorWeight = -1;
 	let nodeWeightThreshold = 0; // Use this to filter out low weight nodes
 	let connWeightThreshold = 0; // Use this to filter out low slime mold connection
 	let connWeightHighDimThreshold = 0;
@@ -195,10 +197,12 @@
 	// Allow linear intepolation between two colors based on distance
 	var closestRGB = chroma('#f2190a');
 	var farthestRGB = chroma('#293366');
+	var closestRGBColorMap = chroma('#f2190a');
+	var farthestRGBColorMap = chroma('#293366');
 	var closestRGBGrayscale = chroma('#FFFFFF');
 	var farthestRGBGrayscale = chroma('#000000');
 	var originRGB = chroma([224, 144, 154]);
-	var navigableRGB = chroma('#f7e968');
+	var navigableRGB = chroma('#f7e968'); // color for anchor points
 	var zoomedPoint = chroma('#00ff22');
 	var zoomedTerm;
 
@@ -256,6 +260,9 @@
 	var expand = false;
 	var docs = {};
 	var highDimMetricBool = false;
+	var colorMapBool = true;
+	var colorMapDropDown;
+	var subClassDropDown;
 
 	// actual calls
 	init();
@@ -325,7 +332,8 @@
 			'showAnnotations': true,
 			'grayScale': false,
 			'year': 2020.7,
-			'timeSize': 1
+			'timeSize': 1,
+			'pointSize': 1
 		};
 
 		newAnnotationParam = {
@@ -337,69 +345,130 @@
 			'annotationSearch': ""
 		};
 
+		if (dataDirectory === "data/plankton/") {
+			const axesHelper = new THREE.AxesHelper( 500 );
+			scene.add( axesHelper );
+		}
+
 		gui.add(GUIparam, 'selectData', datasetList).name('Dataset').onChange(function(){
+			if (dataDirectory === "data/global_1/" || (dataDirectory === "data/global_2/")) {
+				visualFolder.remove(subClassDropDown);
+			}
+
 			dataDirectory = GUIparam.selectData;
+			traceDataDirectory = dataDirectory;
+
 			scene.remove(scene.children[0]);
+			initializeData();
+			automaticLoadData(dataDirectory);
+			camera.position.z = 800;
+			camera.near = 5;
 			group = new THREE.Group();
 			scene.add(group);
 			if (dataDirectory === "data/plankton/") {
 				const axesHelper = new THREE.AxesHelper( 500 );
 				scene.add( axesHelper );
 			}
-			initializeData();
-			automaticLoadData(dataDirectory);
+			visualFolder.remove(colorMapDropDown);
+			colorModeList = ["slime connect", "part of speech"];
+			if (colorMapBool && (dataDirectory === "data/plankton/")) {
+				colorModeList.push("lat", "lon", "t", "s", "H1", "H2", "H3");
+				colorMapDropDown = visualFolder.add(GUIparam, 'colorMode', colorModeList).name('Color Mode').onChange(function(){
+					colorMode = GUIparam.colorMode;
+					if (colorMode !== ("slime connect" || "part of speech")) {
+						getFileObject(traceDataDirectory + 'color_map/' + colorMode +".csv", function (colorMapData) {
+							let reader = new FileReader();
+
+							reader.onload = (e) => {
+								const file = e.target.result;
+								var lines = file.split(/\r\n|\n/);
+								lines = lines.slice(0, lines.length - 1);
+								loadColorMap(lines);
+							}
+
+							var a = reader.readAsText(colorMapData);
+
+						});
+
+					}
+
+					updatePtsColor();
+				})
+			} else {
+				colorMapDropDown = visualFolder.add(GUIparam, 'colorMode', colorModeList).name('Color Mode').onChange(function(){
+					colorMode = GUIparam.colorMode;
+					updatePtsColor();
+				})
+			}
+
+			if (dataDirectory === "data/global_1/" || (dataDirectory === "data/global_2/")) {
+				subClassDropDown = visualFolder.add(GUIparam, 'filterPOS', filterPOSList).name('Pick Subclass').onChange(function(){
+					filterPOS = GUIparam.filterPOS;
+					updatePtsColor();
+				})
+			}
+
+
 
 		})
 
-		var colorModeList = ["slime connect", "part of speech", "high dimension"];
+		var colorModeList = ["slime connect", "part of speech"];
+
+		if (highDimMetricBool) {
+			colorModeList.push("high dimension");
+		}
 
 		const visualFolder = gui.addFolder('Visual Parameters')
-
-		visualFolder.add(GUIparam, 'colorMode', colorModeList).name('Color Mode').onChange(function(){
-			colorMode = GUIparam.colorMode;
-			updatePtsColor();
-		})
 
 		var filterPOSList = ['None', 'NOUN+VERB+ADJ+ADV', 'ADV', 'NUM', 'ADJ', 'NOUN', 'VERB', 'ADP', 'AUX', 'PROPN',
 			'DET', 'PUNCT', 'PRON', 'CCONJ', 'X', 'PART', 'INTJ', 'SYM']
 
-		visualFolder.add(GUIparam, 'filterPOS', filterPOSList).name('Pick Subclass').onChange(function(){
-			filterPOS = GUIparam.filterPOS;
-			updatePtsColor();
-		})
+		if (dataDirectory === "data/global_1/" || (dataDirectory === "data/global_2/")) {
+			subClassDropDown = visualFolder.add(GUIparam, 'filterPOS', filterPOSList).name('Pick Subclass').onChange(function(){
+				filterPOS = GUIparam.filterPOS;
+				updatePtsColor();
+			});
+		}
+
 
 		visualFolder.add(GUIparam, 'colorRatioPow', 0.05, 1, 0.005).name('Color Gradient').onChange(function(){
 			colorRatioPow = GUIparam.colorRatioPow;
 			updatePtsColor();
-		})
+		});
 
 		// gui.add(GUIparam, 'nodeWeightThreshold', 0, 1).name('Lowest Weight').onChange(function(){
 		// 	nodeWeightThreshold = GUIparam.nodeWeightThreshold;
 		// 	updatePtsColor();
 		// })
 
+		visualFolder.add(GUIparam, 'pointSize', 0.001, 1).name('Point Size').onChange(function(size){
+			for (let k = 0; k < maxParticleCount; k++)
+				particleSize[k] = size;
+			updatePtsColor();
+		});
+
 		gui.add(GUIparam, 'particleConnectionWeight', 0, 100000).name('Filter LD').onChange(function(){
 			connWeightThreshold = GUIparam.particleConnectionWeight;
 			updatePtsColor();
-		})
+		});
 
 		gui.add(GUIparam, 'particleHighDimConnectionWeight', 0, 100000).name('Filter HD').onChange(function(){
 			connWeightHighDimThreshold = GUIparam.particleHighDimConnectionWeight;
 			updatePtsColor();
-		})
+		});
 
 		visualFolder.add(GUIparam, 'opacityTuning', 0, 1).name('Opacity').onChange(function(){
 			opacityTuning = GUIparam.opacityTuning;
 			updatePtsColor();
-		})
+		});
 
 		visualFolder.add(GUIparam, 'shiftDim').name('Dim When Shift').onChange(function(){
 			shiftDim = GUIparam.shiftDim;
-		})
+		});
 
 		gui.add(GUIparam, 'displayMultiToken').name('Fuzzy Cursor').onChange(function(){
 			displayMultiToken = GUIparam.displayMultiToken;
-		})
+		});
 
 		// gui.add(GUIparam, 'alwaysAnchor').name('Keep Anchor Displayed').onChange(function(){
 		// 	alwaysAnchor = GUIparam.alwaysAnchor;
@@ -409,12 +478,42 @@
 		gui.add(GUIparam, 'showAnnotations').name('ShowAnnotations').onChange(function(showAnnotationsBool){
 			showAnnotations = showAnnotationsBool;
 			updatePtsColor();
-		})
+		});
 
 		visualFolder.add(GUIparam, 'grayScale').name('grayScale').onChange(function(usergrayScaleBool){
 			grayScaleBool = usergrayScaleBool;
 			updatePtsColor();
-		})
+		});
+
+		if (colorMapBool && dataDirectory === "data/plankton/") {
+			colorModeList.push("lat", "lon", "t", "s", "H1", "H2", "H3");
+			colorMapDropDown = visualFolder.add(GUIparam, 'colorMode', colorModeList).name('Color Mode').onChange(function(){
+				colorMode = GUIparam.colorMode;
+				if (colorMode !== ("slime connect" || "part of speech")) {
+					getFileObject(traceDataDirectory + 'color_map/' + colorMode +".csv", function (colorMapData) {
+						let reader = new FileReader();
+
+						reader.onload = (e) => {
+							const file = e.target.result;
+							var lines = file.split(/\r\n|\n/);
+							lines = lines.slice(0, lines.length - 1);
+							loadColorMap(lines);
+						}
+
+						var a = reader.readAsText(colorMapData);
+
+					});
+
+				}
+
+				updatePtsColor();
+			})
+		} else {
+			colorMapDropDown = visualFolder.add(GUIparam, 'colorMode', colorModeList).name('Color Mode').onChange(function(){
+				colorMode = GUIparam.colorMode;
+				updatePtsColor();
+			})
+		}
 
 		window.addEventListener( 'resize', onWindowResize, false );
 		document.addEventListener('dblclick', onDocumentDoubleClick);
@@ -1440,6 +1539,7 @@
 		particleSize = new Float32Array(maxParticleCount).fill(0.75);
 		particleConnectionWeight = new Float32Array( maxParticleCount);
 		particleHighDimConnectionWeight = new Float32Array( maxParticleCount);
+		particleColorMap = new Float32Array( maxParticleCount);
 		particleData.length = 0;
 
 		for ( let i = 0; i < maxParticleCount; i ++ ) {
@@ -1548,6 +1648,28 @@
 		updatePtsColor();
 	}
 
+	// LOADING ADDITIONAL COLOR MAP
+	function loadColorMap(lines) {
+		// We want to load an additional, arbitrary color map
+		particleColorMap.fill(0);
+
+		// possibly vectorize? instead of iterate over all lines, use a mapped function
+		for (let i = 0; i < lines.length; i++) {
+			var lineData = lines[i].split(',');
+
+			const id = lineData[0]/1;
+			const colorWeight = lineData[1]/1 * 1000;
+
+			particleColorMap[id] = colorWeight;
+			if (colorWeight > topColorWeight){
+				topColorWeight = colorWeight;
+				console.log("top color weight:", topColorWeight);
+			}
+		}
+
+		updatePtsColor();
+	}
+
 	// Adjust so that the origini is at the origin point
 	function adjustGraphPos() {
 		var scaleFactor = 10;
@@ -1606,26 +1728,18 @@
 				particleColor[ i * 3 + 1 ] = 0.0;
 				particleColor[ i * 3 + 2] = 0.0;
 				particleOpacity[i] = 0.0;
-			}
-			else {
+			} else {
 				if (particleData[i].id == originAttr) { // Color for origin point
 					particleColor[ i * 3 ] = originRGB.rgb()[0] / 255;
 					particleColor[ i * 3 + 1 ] = originRGB.rgb()[1] / 255;
 					particleColor[ i * 3 + 2 ] = originRGB.rgb()[2] / 255;
 					particleOpacity[i] = 1.0;
-				}
-				else if (availableIds[particleData[i].id]) { // Change color if the point can be navigated
+				} else if (availableIds[particleData[i].id]) { // Change color if the point can be navigated
 					particleColor[ i * 3 ] = navigableRGB.rgb()[0] / 255;
 					particleColor[ i * 3 + 1 ] = navigableRGB.rgb()[1] / 255;
 					particleColor[ i * 3 + 2 ] = navigableRGB.rgb()[2] / 255;
 					particleOpacity[i] = 1.0;
-				}
-				else {
-					var ratio = Math.pow(particleConnectionWeight[i] / topEdgeWeight, colorRatioPow);
-					if (highDimMetricBool) {
-						var highDimRatio = Math.pow(particleHighDimConnectionWeight[i] / topEdgeWeight, colorRatioPow);
-					}
-					var mypos = particleData[i].name.split('_')[1];
+				} else {
 					var finalColor;
 					switch (colorMode) {
 							// Change color based on slime connection
@@ -1633,6 +1747,7 @@
 							// compute the RBG values once and simply look it up as needed
 							// discretize the ratios (small enough for no one to see difference)
 						case "slime connect":
+							var ratio = Math.pow(particleConnectionWeight[i] / topEdgeWeight, colorRatioPow);
 							if (grayScaleBool === false) {
 								finalColor = chroma.mix(farthestRGB, closestRGB, ratio, 'hsl').rgb();
 							} else {
@@ -1642,17 +1757,30 @@
 
 							// Change color based on the part of speech
 						case "part of speech":
+							var mypos = particleData[i].name.split('_')[1];
 							finalColor = posColorMap[mypos].rgb();
 							break;
 
 						case "high dimension":
 							//particleHighDimConnectionWeight
+							var highDimRatio = Math.pow(particleHighDimConnectionWeight[i] / topEdgeWeight, colorRatioPow);
 							if (grayScaleBool === false) {
 								finalColor = chroma.mix(farthestRGB, closestRGB, highDimRatio, 'hsl').rgb();
 							} else {
 								finalColor = chroma.mix(farthestRGBGrayscale, closestRGBGrayscale, highDimRatio, 'hsl').rgb();
 							}
 							break;
+
+						default:
+							if (colorMapBool) {
+								var colorMapRatio = Math.pow(particleColorMap[i] / topColorWeight, colorRatioPow);
+								if (grayScaleBool === false) {
+									finalColor = chroma.mix(farthestRGBColorMap, closestRGBColorMap, colorMapRatio, 'hsl').rgb();
+								} else {
+									finalColor = chroma.mix(farthestRGBGrayscale, closestRGBGrayscale, colorMapRatio, 'hsl').rgb();
+								}
+								break;
+							}
 					}
 
 					particleColor[ i * 3 ] = finalColor[0] / 255;
