@@ -1,4 +1,4 @@
-# Gainforest EcoHackathon - Team Acoustic Biologists
+# Gainforest EcoHackathon - Team Acoustic Biologists 🦜
 
 [![](image/1_tool_overview.PNG)](image/1_tool_overview.PNG)  
 
