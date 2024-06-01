@@ -2,7 +2,8 @@
 
 [![](image/1_tool_overview.PNG)](image/1_tool_overview.PNG)  
 
-**Link to app**: [https://polyphyhub.github.io/PolyGlot/](https://polyphyhub.github.io/PolyGlot/)    
+**Link to app**: [[https://polyphyhub.github.io/PolyGlot/]](https://harryhancock.github.io/PolyGlot_AcousticBiologists/)
+
 This hackathon project is an extension of the Polyglot app, part of the PolyPhy toolkit of network-inspired data science tools (for background on the PolyPhy hub, see [here](https://github.com/PolyPhyHub)). We modify the original app to display a point cloud of bird songs data (with audio playback available!).
 
 # Background and Methodology
