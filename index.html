@@ -5,7 +5,6 @@
 	<title>Polyglot</title>
 	<style>
 		html {
-			cursor: url("cursor 40x40.svg") 20 20, auto;
 		}
 		body {
 			margin: 0;
@@ -20,8 +19,8 @@
 			min-width: 100px;
 			text-align: center;
 			padding: 5px 12px;
-			font-family: Courier;
-			background: #c9c9c9;
+			font-family: Avenir;
+			background: #b5ffb8;
 			display: none;
 			opacity: 0;
 			border: 1px solid black;
@@ -44,7 +43,7 @@
                 vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
                 gl_Position = projectionMatrix * mvPosition;
 
-                gl_PointSize = size * 5.0 * scale / length(mvPosition.xyz); // Adjust point size here!
+                gl_PointSize = size * 35.0 * scale / length(mvPosition.xyz); // Adjust point size here!
 
                 gcolor = color;
                 galpha = alpha;
@@ -68,7 +67,9 @@
         </script>
 </head>
 <body>
-<div id="tooltip"></div>
+<div id="tooltip">
+	<div>hi</div>
+</div>
 
 <div id="container"></div>
 
@@ -109,11 +110,11 @@
 	const urlParams = new URLSearchParams(window.location.search);
 	let ifMusic = urlParams.get('music') == 'true';
 
-	let dataDirectory = "data/global_1/";
+	let dataDirectory = "data/bird_songs_euclidean/";
 	let firstFile = true; // We want this to be false after loading the first file so that the points dont shift around
 
 	// ** Set of variables from deposit_reader.py, important for coordiante conversion **
-	let SCALING_FACTOR_SLIME = 10;
+	let SCALING_FACTOR_SLIME = 20;
 	let GRID_MIN = [-115.75681, -101.80056, -126.10199]; // grid center - size / 2 given in metadata
 
 	let group
@@ -147,10 +148,10 @@
 	var anchorList = ["0: also_ADV", "918: right_NOUN"];
 	var searchAnchorList = ["0: also_ADV", "918: right_NOUN"];
 	var searchZoomList = ["0: also_ADV", "918: right_NOUN"];
-	var datasetList = ["data/global_1/", "data/global_2/", "data/music_demo/", "data/plankton/"];
+	var datasetList = ["data/global_1/", "data/global_2/", "data/music_demo/", "data/plankton/", "data/bird_songs_euclidean/"];
 
 	//var datasetList = ["data/global_1/", "data/global_2/", "data/music_demo/", "data/Lautonomy_Data/"];
-	let traceDataDirectory = "data/global_1/"; // CONTROLS WHICH DATASET TO LOAD WITH!!
+	let traceDataDirectory = "data/bird_songs_euclidean/"; // CONTROLS WHICH DATASET TO LOAD WITH!!
 	var dataTraceController;
 
 	// change initial dataset if music == true, modified for quick access to music embedding
@@ -196,15 +197,16 @@
 
 	// Allow linear intepolation between two colors based on distance
 	var closestRGB = chroma('#f2190a');
-	var farthestRGB = chroma('#293366');
+	var farthestRGB = chroma('#3e7bd6');
 	var closestRGBColorMap = chroma('#f2190a');
-	var farthestRGBColorMap = chroma('#293366');
+	var farthestRGBColorMap = chroma('#3e7bd6');
 	var closestRGBGrayscale = chroma('#FFFFFF');
 	var farthestRGBGrayscale = chroma('#000000');
 	var originRGB = chroma([224, 144, 154]);
 	var navigableRGB = chroma('#f7e968'); // color for anchor points
 	var zoomedPoint = chroma('#00ff22');
 	var zoomedTerm;
+	var hidetooltipbool = true;
 
 	var originalRGB = [0, 0, 0, 0]; // Different from OriginRGB, this is used to store original color for highlighting
 
@@ -263,6 +265,7 @@
 	var colorMapBool = true;
 	var colorMapDropDown;
 	var subClassDropDown;
+	var bird_songs_metadata = {};
 
 	// actual calls
 	init();
@@ -272,7 +275,7 @@
 		container = document.getElementById( 'container' );
 
 		raycaster = new THREE.Raycaster();
-		raycaster.params.Points.threshold = 0.7;
+		raycaster.params.Points.threshold = 4;
 		raycasterMultiTokens = new THREE.Raycaster();
 		raycasterMultiTokens.params.Points.threshold = 1.75;
 		raycasterAnnotations = new THREE.Raycaster();
@@ -283,9 +286,9 @@
 
 		scene = new THREE.Scene();
 		camera = new THREE.PerspectiveCamera(45,
-				window.innerWidth/window.innerHeight, 5, 4000);
+				window.innerWidth/window.innerHeight, 2, 40000);
 		camera.position.z = 800;
-		camera.near = 5;
+		camera.near = 50;
 		// CHANGED NEAR PARAM TO MAKE RAY CASTING SMOOTHER DURING ZOOM
 
 
@@ -297,15 +300,21 @@
 		// REQUIRED - group to add everything in
 		group = new THREE.Group();
 		scene.add(group);
+		const texture = new THREE.TextureLoader().load( "image/img.png" );
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		scene.background = texture;
 
 		// REQUIRED - add meshes, add both point and edge (Should be reading data)
 		initializeData();
 		automaticLoadData(dataDirectory);
 
 		// REQUIRED
-		renderer = new THREE.WebGLRenderer();
+		renderer = new THREE.WebGLRenderer({alpha: true});
 		renderer.setSize(window.innerWidth, window.innerHeight);
 		document.body.appendChild(renderer.domElement);
+		//renderer.setClearColor (0x9effcd,0.5);
+		// image/habitats_hero_rainforest.jpg
 
 		container.appendChild( renderer.domElement );
 
@@ -315,7 +324,7 @@
 
 		GUIparam = {
 			'selectData': dataDirectory,
-			'colorMode': "slime connect",
+			'colorMode': "Euclidean Similarity",
 			'filterPOS': "None",
 			'colorRatioPow': 0.5,
 			'nodeWeightThreshold': 0,
@@ -370,7 +379,8 @@
 				scene.add( axesHelper );
 			}
 			visualFolder.remove(colorMapDropDown);
-			colorModeList = ["slime connect", "part of speech"];
+			// colorModeList = ["slime connect", "part of speech"];
+			colorModeList = ["Euclidean Similarity"];
 			if (colorMapBool && (dataDirectory === "data/plankton/")) {
 				colorModeList.push("lat", "lon", "t", "s", "H1", "H2", "H3");
 				colorMapDropDown = visualFolder.add(GUIparam, 'colorMode', colorModeList).name('Color Mode').onChange(function(){
@@ -412,7 +422,8 @@
 
 		})
 
-		var colorModeList = ["slime connect", "part of speech"];
+		// var colorModeList = ["slime connect", "part of speech"];
+		var colorModeList = ["Euclidean Similarity"];
 
 		if (highDimMetricBool) {
 			colorModeList.push("high dimension");
@@ -441,21 +452,21 @@
 		// 	updatePtsColor();
 		// })
 
-		visualFolder.add(GUIparam, 'pointSize', 0.001, 1).name('Point Size').onChange(function(size){
+		visualFolder.add(GUIparam, 'pointSize', 0.001, 5).name('Point Size').onChange(function(size){
 			for (let k = 0; k < maxParticleCount; k++)
 				particleSize[k] = size;
 			updatePtsColor();
 		});
 
-		gui.add(GUIparam, 'particleConnectionWeight', 0, 100000).name('Filter LD').onChange(function(){
+		gui.add(GUIparam, 'particleConnectionWeight', 0, 6000).name('Filter Euclidean').onChange(function(){
 			connWeightThreshold = GUIparam.particleConnectionWeight;
 			updatePtsColor();
 		});
 
-		gui.add(GUIparam, 'particleHighDimConnectionWeight', 0, 100000).name('Filter HD').onChange(function(){
-			connWeightHighDimThreshold = GUIparam.particleHighDimConnectionWeight;
-			updatePtsColor();
-		});
+		// gui.add(GUIparam, 'particleHighDimConnectionWeight', 0, 100000).name('Filter HD').onChange(function(){
+		// 	connWeightHighDimThreshold = GUIparam.particleHighDimConnectionWeight;
+		// 	updatePtsColor();
+		// });
 
 		visualFolder.add(GUIparam, 'opacityTuning', 0, 1).name('Opacity').onChange(function(){
 			opacityTuning = GUIparam.opacityTuning;
@@ -466,9 +477,9 @@
 			shiftDim = GUIparam.shiftDim;
 		});
 
-		gui.add(GUIparam, 'displayMultiToken').name('Fuzzy Cursor').onChange(function(){
-			displayMultiToken = GUIparam.displayMultiToken;
-		});
+		// gui.add(GUIparam, 'displayMultiToken').name('Fuzzy Cursor').onChange(function(){
+		// 	displayMultiToken = GUIparam.displayMultiToken;
+		// });
 
 		// gui.add(GUIparam, 'alwaysAnchor').name('Keep Anchor Displayed').onChange(function(){
 		// 	alwaysAnchor = GUIparam.alwaysAnchor;
@@ -637,9 +648,12 @@
 		if (event.keyCode == 16 && !shiftPressed){ // SHIFT key
 			shiftPressed = true;
 			updatePtsColor();
+		} else if (event.keyCode == 17 && hidetooltipbool){ //CONTROL KEY
+			hidetooltipbool = false;
+		} else if (event.keyCode == 17 && !hidetooltipbool){
+			hidetooltipbool = true;
 		}
 	}
-
 
 	function onKeyUpEvent(event) {
 		if (event.keyCode == 16 && shiftPressed){ // SHIFT key
@@ -844,6 +858,9 @@
 	}
 
 	function showTooltip(objectPosition, text) {
+		if (dataDirectory === "data/bird_songs_euclidean/") {
+			showTooltipAudio(objectPosition, text.split(": ")[1].split("-")[0])
+		} else {
 		var divElement = $("#tooltip");
 
 		divElement.css({
@@ -868,16 +885,62 @@
 
 		divElement.text(text);
 		divElement.css({opacity: 0.7});
+
+		}
 	}
 
-	function hideTooltip() {
-		var divElement = $("#tooltip");
-		if (divElement) {
+	function showTooltipAudio(objectPosition, text) {
+		if (hidetooltipbool) {
+			const data = bird_songs_metadata[text]
+			console.log("DATA", data);
+			// name, duration, location, url
+
+			$("#tooltip").empty();
+			var divElement = $("#tooltip");
+			var bird_name = $('<div style="font-size: large; font-weight:bold;">' + data[0] + '</div>');
+			var location = $('<div>' + data[2] + '</div>');
+			var url = $('<audio controls src=' + data[3] + '></audio>');
+			$("#tooltip").append(bird_name);
+			$("#tooltip").append(location);
+			$("#tooltip").append(url);
+
 			divElement.css({
-				display: "none"
+				display: "block",
+				opacity: 0.0
 			});
+
+			var canvasHalfWidth = renderer.domElement.offsetWidth / 2;
+			var canvasHalfHeight = renderer.domElement.offsetHeight / 2;
+
+			var tooltipPosition = objectPosition.clone().project(camera);
+			tooltipPosition.x = (tooltipPosition.x * canvasHalfWidth) + canvasHalfWidth;
+			tooltipPosition.y = -(tooltipPosition.y * canvasHalfHeight) + canvasHalfHeight;
+
+			var tooltipWidth = divElement[0].offsetWidth;
+			var tooltipHeight = divElement[0].offsetHeight;
+
+			divElement.css({
+				left: `${tooltipPosition.x + tooltipWidth / 16 - tooltipWidth / 2}px`,
+				top: `${tooltipPosition.y + tooltipHeight / 16 + 30}px`
+			});
+
+			//divElement.text(text);
+			divElement.css({opacity: 0.7});
 		}
-		divElement.text('');
+	}
+
+
+	function hideTooltip() {
+		if (hidetooltipbool) {
+			var divElement = $("#tooltip");
+			divElement.empty();
+			if (divElement) {
+				divElement.css({
+					display: "none"
+				});
+			}
+			divElement.text('');
+		}
 	}
 
 	// Initialize all the data structures
@@ -1009,6 +1072,25 @@
 
 							}
 							docReq.open("GET", dataDirectory + "top_documents.tsv");
+							docReq.send();
+						}
+
+						// 5. Load Secondary Metadata
+						if (dataDirectory === "data/bird_songs_euclidean/") {
+							var docReq = new XMLHttpRequest();
+							docReq.onload = function () {
+								// change to num years
+								console.log("--- INSIDE SECONDARY META READING ---")
+								var docsResponse = this.responseText.split(/\n/);
+
+								for (i = 1; i < docsResponse.length-1; i++) {
+									var temp_row = docsResponse[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+									bird_songs_metadata[temp_row[0]] = [temp_row[1], temp_row[2], temp_row[3], temp_row[4]]
+									// id, common name, duration, location, audio url
+								}
+
+							}
+							docReq.open("GET", dataDirectory + "metadata-secondary.csv");
 							docReq.send();
 						}
 
@@ -1475,6 +1557,8 @@
                             })
                             */
 						}
+
+
 					}
 
 					var a = reader.readAsText(fulldata);
@@ -1484,6 +1568,8 @@
 			var a = reader.readAsText(metamain);
 
 		});
+
+
 
 	}
 
@@ -1523,12 +1609,13 @@
 			fragmentShader: document.getElementById( 'fragmentshader-token' ).textContent,
 
 			vertexColors:   true,
-			blending:       THREE.CustomBlending,
+			blending:       THREE.CustomBlending + 1,
 			blendSrc:       THREE.SrcAlphaFactor,
 			blendDst:       THREE.DstAlphaFactor,
 			depthTest:      false,
 			depthWrite:     true,
-			transparent:    true
+			transparent:    true,
+
 		} );
 
 		particles = new THREE.BufferGeometry();
