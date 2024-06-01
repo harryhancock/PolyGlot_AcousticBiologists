@@ -1,6 +1,6 @@
 # Gainforest EcoHackathon - Team Acoustic Biologists 🦜
 
-[![](image/1_tool_overview.PNG)](image/1_tool_overview.PNG)  
+[![](image/AppImg.png)](image/AppImg.png)  
 
 **Link to app**: [[https://polyphyhub.github.io/PolyGlot/]](https://harryhancock.github.io/PolyGlot_AcousticBiologists/)
 
