@@ -8,6 +8,7 @@ This hackathon project is an extension of the Polyglot app, part of the PolyPhy 
 # Background and Methodology
 [![](image/Data_Pipeline.jpg)](image/Data_Pipeline.jpg) 
 
+[![](image/Anchor_Points_Explainer.jpg)](image/Anchor_Points_Explainer.jpg) 
 # Features
 1. Press <kbd>Control</kbd> to hold the tooltip in place (ie., so we can hit the audio play button). Hit <kbd>Control</kbd> again to go back to hovering. If it does not go away, try clicking outside of the tooltip and pressing <kbd>Control</kbd> again.
 
