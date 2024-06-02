@@ -45,6 +45,20 @@ So, what's the point of this? Well, in the app, users can actually switch betwee
 
 <img width="1425" alt="Screen Shot 2024-06-02 at 11 57 00 AM" src="https://github.com/harryhancock/PolyGlot_AcousticBiologists/assets/54760157/8592c7d0-118b-46fd-bdeb-8b8c0c895e58">
 
+## Data Explainer
+In case the data in the app is useful to anyone, we provide an explainer here on how it works. First, open the "data" folder contained in this repo. You will find 
+1. CSV file (bird_songs_128_dim.csv): this contains the original 128-dimensional MFCC embeddings 
+2. Python Notebook: this contains all the code used to process our data (compute MFCC embeddings, compute Euclidean similarities, etc)
+3. Bird Songs Folder (bird_songs_euclidean):
+
+   a. There are 350 .txt files - the number in the name of the file represents the anchor point. The rows inside the file contain the Euclidean similarity scores for that anchor point
+
+   b. There is a full_data file which simply contains the 3D coordinates and names of each point (plus a 0/1 boolean to indicate whether a point is an anchor point)
+
+   c. There is a meta-main.txt file which simply contains the names of each anchor point
+
+   d. There is a metadata-secondary.csv file which contains all the metadata per point (name, location, duration, url)
+
 
 ## Authors
 This version of Polyglot was extended as part of the Acoustic Biologist's team submission to the GainForest Ecohackathon in 2024. 
