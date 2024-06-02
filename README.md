@@ -1,4 +1,4 @@
-# Gainforest EcoHackathon - Team: Acoustic Biologists 🦜
+# GainForest EcoHackathon - Team: Acoustic Biologists 🦜
 
 [![](image/AppImg.png)](image/AppImg.png)  
 
@@ -47,7 +47,7 @@ So, what's the point of this? Well, in the app, users can actually switch betwee
 
 
 ## Authors
-This version of Polyglot was extended as part of the Acoustic Biologist's team submission to the Gainforest Ecohackathon in 2024. 
+This version of Polyglot was extended as part of the Acoustic Biologist's team submission to the GainForest Ecohackathon in 2024. 
 
 ### Original Credits
 This version of Polyglot was extended as part of Kiran Deol's 2023 Google Summer of Code project, mentored by [Oskar Elek](http://elek.pub) and [Jasmine Otto](https://jazztap.github.io) and is hosted as part of PolyPhy hub of bio-inspired data science tools.
